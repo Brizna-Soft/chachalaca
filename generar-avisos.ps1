@@ -22,6 +22,13 @@ foreach ($d in Get-ChildItem $share -Directory | Sort-Object Name) {
     [void]$sb.AppendLine((Get-Content $copyright -Raw -Encoding UTF8).TrimEnd())
     [void]$sb.AppendLine('')
 }
+[void]$sb.AppendLine('------------------------------------------------------------------------')
+[void]$sb.AppendLine('VB-CABLE (carpeta VB-CABLE)')
+[void]$sb.AppendLine('------------------------------------------------------------------------')
+[void]$sb.AppendLine('VB-CABLE es de VB-Audio Software (Vincent Burel), https://vb-cable.com. Es donationware.')
+[void]$sb.AppendLine('Se incluye tal cual, sin cambios, como permite VB-Audio para programas gratis')
+[void]$sb.AppendLine('(https://vb-audio.com/Services/licensing.htm). Su licencia está en VB-CABLE\readme.txt.')
+[void]$sb.AppendLine('')
 $salida = Join-Path $PSScriptRoot 'AVISOS-DE-TERCEROS.txt'
 [System.IO.File]::WriteAllText($salida, $sb.ToString(), (New-Object System.Text.UTF8Encoding($true)))
 Write-Host "Listo: $salida"

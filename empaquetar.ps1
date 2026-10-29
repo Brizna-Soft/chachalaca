@@ -16,15 +16,42 @@ New-Item -ItemType Directory -Force $temporal | Out-Null
 Copy-Item (Join-Path $programa 'Chachalaca.exe') $temporal
 Copy-Item (Join-Path $raiz 'LICENSE') (Join-Path $temporal 'LICENCIA.txt')
 Copy-Item (Join-Path $raiz 'AVISOS-DE-TERCEROS.txt') $temporal
+
+# VB-CABLE, el micrófono virtual de VB-Audio, tal cual lo publican. VB-Audio permite incluirlo en programas gratis si se
+# dice que es suyo y que es donationware (https://vb-audio.com/Services/licensing.htm). La huella se fija aquí: si
+# VB-Audio publica otro paquete, la compilación se detiene hasta revisarlo.
+$vbUrl = 'https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip'
+$vbHuella = 'B950E39F01AF1D04EA623C8F6D8EB9B6EA5C477C637295FABF20631C85116BFB'
+$vbZip = Join-Path $raiz 'vendor\VBCABLE_Driver_Pack45.zip'
+if (-not (Test-Path $vbZip)) {
+    New-Item -ItemType Directory -Force (Split-Path $vbZip) | Out-Null
+    Invoke-WebRequest -Uri $vbUrl -OutFile $vbZip -UseBasicParsing -Headers @{ 'User-Agent' = 'Mozilla/5.0' }
+}
+if ((Get-FileHash $vbZip -Algorithm SHA256).Hash -ne $vbHuella) { throw 'El paquete de VB-CABLE no es el esperado (cambió su huella). Revísalo antes de incluirlo.' }
+Expand-Archive -Path $vbZip -DestinationPath (Join-Path $temporal 'VB-CABLE')
+$notaVB = @"
+VB-CABLE, el micrófono virtual
+==============================
+
+VB-CABLE es un programa de VB-Audio Software (Vincent Burel), no de Brizna Soft: https://vb-cable.com
+Es donationware: se usa gratis y, si te sirve, puedes apoyar a su autor en https://vb-audio.com/Cable/
+
+Va en la carpeta VB-CABLE tal cual lo publica VB-Audio, sin cambios. Chachalaca lo instala con el botón
+"Instalar el micrófono virtual". Para quitarlo: abre VB-CABLE\VBCABLE_Setup_x64.exe como administrador,
+pulsa "Remove Driver" y reinicia la PC.
+"@
+[System.IO.File]::WriteAllText((Join-Path $temporal 'VB-CABLE-es-de-VB-Audio.txt'), $notaVB, (New-Object System.Text.UTF8Encoding($true)))
+
 $leeme = @"
 Chachalaca $version - sonidos y cambio de voz en tu micrófono, gratis, de Brizna Soft
 ==================================================================================
 
-1. Instala el micrófono virtual gratis VB-CABLE: https://vb-audio.com/Cable/
-   (lo hace la empresa VB-Audio; Chachalaca lo usa para que tus amigos te escuchen).
-2. Abre Chachalaca.exe (no hace falta instalarlo).
-3. Si Windows dice "Windows protegió su PC": pulsa "Más información" y luego "Ejecutar de todas formas".
+1. Abre Chachalaca.exe (no hace falta instalarlo).
+2. Si Windows dice "Windows protegió su PC": pulsa "Más información" y luego "Ejecutar de todas formas".
    Sale porque el programa es nuevo y todavía no tiene firma digital.
+3. Si falta el micrófono virtual, pulsa "Instalar el micrófono virtual". Viene adentro: es VB-CABLE, de VB-Audio.
+   Windows te pide permiso de administrador. Si después no oyes tus juegos, elige tus audífonos en
+   Configuración > Sonido > Salida (Chachalaca te avisa).
 4. En Discord o en tu juego, elige "CABLE Output" como micrófono.
    En Discord, apaga la supresión de ruido para que se escuchen bien los sonidos.
 

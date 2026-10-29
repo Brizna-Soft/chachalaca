@@ -1,6 +1,7 @@
 #include "ventana.hpp"
 
 #include <windows.h>
+#include <shellapi.h>
 
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -23,10 +24,16 @@
 #include <wx/tglbtn.h>
 #include <wx/wrapsizer.h>
 
+#include <wx/app.h>
+#include <wx/msgdlg.h>
+#include <wx/weakref.h>
+
 #include <algorithm>
 #include <cmath>
+#include <thread>
 
 #include "ayuda.hpp"
+#include "instalador.hpp"
 #include "util.hpp"
 #include "version.h"
 
@@ -38,8 +45,8 @@ namespace
 
     const wchar_t* Descripcion =
         L"Chachalaca pone sonidos en tu micrófono y te cambia la voz, para Discord y para los juegos "
-        L"con chat de voz.\n\nPara que tus amigos te escuchen necesita un micrófono virtual, por ejemplo "
-        L"VB-CABLE, que es gratis y lo hace la empresa VB-Audio.";
+        L"con chat de voz.\n\nPara que tus amigos te escuchen usa un micrófono virtual: Chachalaca trae VB-CABLE, "
+        L"que es gratis y lo hace VB-Audio (vb-cable.com), no Brizna Soft. Es donationware: si te sirve, apoya a su autor.";
 
     wxString TextoAtajo(int mods, int tecla)
     {
@@ -63,6 +70,13 @@ namespace
         if (tecla == WXK_PAUSE) return VK_PAUSE;
         if ((tecla >= 'A' && tecla <= 'Z') || (tecla >= '0' && tecla <= '9')) return (UINT)tecla;
         return 0;
+    }
+
+    // wx deja «OK» y «Cancel» en inglés
+    void BotonesEnEspanol(wxDialog& d)
+    {
+        if (auto* b = d.FindWindow(wxID_OK)) b->SetLabel(L"Aceptar");
+        if (auto* b = d.FindWindow(wxID_CANCEL)) b->SetLabel(L"Cancelar");
     }
 
     UINT ModsWindows(int mods)
@@ -229,9 +243,15 @@ void VentanaPrincipal::CrearControles()
     m_estado = new wxStaticText(m_panel, wxID_ANY, L"");
     m_estado->SetFont(m_estado->GetFont().Bold());
     filaEstado->Add(m_estado, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, borde);
-    m_comoInstalar = new wxButton(m_panel, wxID_ANY, L"Cómo instalar el micrófono virtual");
-    m_comoInstalar->Bind(wxEVT_BUTTON, [](wxCommandEvent&) { ayuda::AbrirEnlace(PaginaCable); });
+    m_comoInstalar = new wxButton(m_panel, wxID_ANY, L"Instalar el micrófono virtual");
+    m_comoInstalar->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { InstalarMicrofonoVirtual(); });
     filaEstado->Add(m_comoInstalar, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
+    // Chachalaca no cambia la configuración de Windows: abre la página de Sonido para que la persona elija
+    m_arreglarWindows = new wxButton(m_panel, wxID_ANY, L"Abrir el sonido de Windows");
+    m_arreglarWindows->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
+        ShellExecuteW(nullptr, L"open", L"ms-settings:sound", nullptr, nullptr, SW_SHOWNORMAL);
+    });
+    filaEstado->Add(m_arreglarWindows, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
     auto* buscar = new wxButton(m_panel, wxID_ANY, L"Buscar de nuevo");
     buscar->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         LlenarDispositivos();
@@ -292,16 +312,17 @@ void VentanaPrincipal::CrearControles()
     filaVoz->Add(m_nivel, 1, wxALIGN_CENTER_VERTICAL);
     grupoVoz->Add(filaVoz, 0, wxEXPAND | wxALL, FromDIP(6));
 
-    auto* filaEfectos = new wxWrapSizer(wxHORIZONTAL);
+    // Los efectos en una rejilla fija (una de ajuste automático se estira mal dentro de la caja)
+    auto* filaEfectos = new wxGridSizer(5, FromDIP(6), FromDIP(6));
     for (int i = 0; i < (int)cha::Efecto::Cantidad; i++)
     {
         auto e = (cha::Efecto)i;
-        auto* b = new wxToggleButton(cajaVoz, wxID_ANY, cha::NombreEfecto(e), wxDefaultPosition, FromDIP(wxSize(96, 34)));
+        auto* b = new wxToggleButton(cajaVoz, wxID_ANY, cha::NombreEfecto(e), wxDefaultPosition, FromDIP(wxSize(96, 32)));
         b->Bind(wxEVT_TOGGLEBUTTON, [this, e](wxCommandEvent&) { ElegirEfecto(e); });
-        filaEfectos->Add(b, 0, wxALL, FromDIP(3));
+        filaEfectos->Add(b, 0, wxEXPAND);
         m_efectos.push_back(b);
     }
-    grupoVoz->Add(filaEfectos, 0, wxEXPAND | wxALL, FromDIP(3));
+    grupoVoz->Add(filaEfectos, 0, wxEXPAND | wxALL, FromDIP(6));
     caja->Add(grupoVoz, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borde);
 
     // Sonidos
@@ -340,7 +361,7 @@ void VentanaPrincipal::CrearControles()
 
     m_tablero = new wxScrolledWindow(cajaSon, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
     m_tablero->SetScrollRate(0, FromDIP(10));
-    m_tableroSizer = new wxWrapSizer(wxHORIZONTAL);
+    m_tableroSizer = new wxWrapSizer(wxHORIZONTAL, 0);   // sin estirar el último botón de cada fila
     m_tablero->SetSizer(m_tableroSizer);
     grupoSon->Add(m_tablero, 1, wxEXPAND | wxALL, FromDIP(3));
     caja->Add(grupoSon, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borde);
@@ -359,8 +380,17 @@ void VentanaPrincipal::CrearControles()
 void VentanaPrincipal::LlenarDispositivos()
 {
     std::wstring micWindows, salidaWindows;
-    m_mics = m_motor.Microfonos(&micWindows);
+    std::vector<std::wstring> entradas = m_motor.Microfonos(&micWindows);
     std::vector<std::wstring> salidas = m_motor.Salidas(&salidaWindows);
+    m_micWindows = micWindows;
+    m_salidaWindows = salidaWindows;
+    // La otra punta del cable no es un micrófono: si se tomara, el sonido daría vueltas
+    m_mics.clear();
+    for (const auto& e : entradas)
+    {
+        if (!cha::MotorAudio::EsSalidaDeCable(e)) m_mics.push_back(e);
+    }
+    if (cha::MotorAudio::EsSalidaDeCable(micWindows)) micWindows.clear();
     m_virtuales.clear();
     m_escuchas.clear();
     for (const auto& s : salidas)
@@ -368,6 +398,9 @@ void VentanaPrincipal::LlenarDispositivos()
         if (cha::MotorAudio::EsMicrofonoVirtual(s)) m_virtuales.push_back(s);
         else m_escuchas.push_back(s);
     }
+    // VB-CABLE trae también una entrada de 16 canales: mejor la normal primero, que es la que se elige sola
+    std::stable_partition(m_virtuales.begin(), m_virtuales.end(),
+                          [](const std::wstring& n) { return n.find(L"16 Ch") == std::wstring::npos; });
 
     m_eligeMic->Clear();
     m_eligeMic->Append(L"El de Windows" + (micWindows.empty() ? std::wstring() : L" (" + micWindows + L")"));
@@ -401,10 +434,27 @@ void VentanaPrincipal::ArrancarAudio()
     m_ajustes.microfonoVirtual = vir;
     m_ajustes.escucharEn = esc;
 
+    // Si Windows quedó usando el cable (pasa al instalar VB-CABLE), se usan los de verdad y se avisa
+    const bool micDeWindowsEsCable = cha::MotorAudio::EsSalidaDeCable(m_micWindows);
+    const bool salidaDeWindowsEsCable = cha::MotorAudio::EsMicrofonoVirtual(m_salidaWindows);
+    if (mic.empty() && micDeWindowsEsCable && !m_mics.empty()) mic = m_mics[0];
+    if (esc.empty() && salidaDeWindowsEsCable && !m_escuchas.empty()) esc = m_escuchas[0];
+
     std::wstring error;
     if (!m_motor.Arrancar(mic, vir, esc, error))
     {
         MostrarEstado(error, false, m_virtuales.empty());
+        return;
+    }
+    if (salidaDeWindowsEsCable || micDeWindowsEsCable)
+    {
+        wxString que = salidaDeWindowsEsCable && micDeWindowsEsCable ? wxString(L"el sonido y el micrófono")
+                     : salidaDeWindowsEsCable ? wxString(L"el sonido") : wxString(L"el micrófono");
+        MostrarEstado(L"Ojo: Windows está usando el cable virtual para " + que + L", por eso puedes dejar de oír tus juegos. "
+                      L"Pulsa «Abrir el sonido de Windows» y elige tus audífonos en «Salida» y tu micrófono en «Entrada».",
+                      false, false);
+        m_arreglarWindows->Show();
+        m_panel->Layout();
         return;
     }
     if (m_virtuales.empty())
@@ -429,9 +479,66 @@ void VentanaPrincipal::MostrarEstado(const wxString& texto, bool bien, bool falt
     m_estado->SetLabel(texto);
     m_estado->SetForegroundColour(bien ? wxColour(0x2E, 0x9E, 0x4F) : wxColour(0xC7, 0x6B, 0x00));
     m_comoInstalar->Show(faltaVirtual);
+    m_arreglarWindows->Hide();
     m_estado->Wrap(-1);
     m_estado->Wrap(std::max(FromDIP(200), GetClientSize().GetWidth() - FromDIP(360)));
     m_panel->Layout();
+}
+
+void VentanaPrincipal::InstalarMicrofonoVirtual()
+{
+    const std::wstring instalador = cha::InstaladorVBCable();
+    if (instalador.empty())
+    {
+        // Sin la carpeta VB-CABLE junto al programa: se baja de su página
+        ayuda::AbrirEnlace(PaginaCable);
+        return;
+    }
+
+    wxMessageDialog d(this,
+        L"Chachalaca va a instalar VB-CABLE, el micrófono virtual gratis de VB-Audio (vb-cable.com). "
+        L"Es lo que deja que tus amigos escuchen tus sonidos y tu voz cambiada.\n\n"
+        L"• VB-CABLE es de VB-Audio, no de Brizna Soft. Es donationware: si te sirve, puedes apoyar a su autor en su página.\n"
+        L"• Windows te va a pedir permiso de administrador, y quizás que confirmes el controlador.\n"
+        L"• Al terminar, revisa que Windows siga usando tus audífonos: Chachalaca te avisa si no.\n"
+        L"• Si el micrófono virtual no aparece, reinicia la PC.",
+        L"Instalar el micrófono virtual", wxYES_NO | wxICON_INFORMATION);
+    d.SetYesNoLabels(L"Instalar", L"Ahora no");
+    if (d.ShowModal() != wxID_YES) return;
+
+    if (!cha::FirmaDeVBAudio(instalador))
+    {
+        ayuda::Aviso(L"El instalador de VB-CABLE que viene con Chachalaca no tiene la firma de VB-Audio. Por seguridad no lo abro.\n\n"
+                     L"Bájalo de su página oficial: " + wxString(PaginaCable),
+                     L"Instalar el micrófono virtual", wxOK | wxICON_WARNING, this);
+        return;
+    }
+
+    std::wstring error;
+    HANDLE proceso = cha::AbrirInstaladorVBCable(GetHWND(), instalador, error);
+    if (!proceso)
+    {
+        ayuda::Aviso(error, L"Instalar el micrófono virtual", wxOK | wxICON_WARNING, this);
+        return;
+    }
+    MostrarEstado(L"Instalando el micrófono virtual... acepta los avisos de Windows.", true, false);
+    m_comoInstalar->Disable();
+
+    wxWeakRef<VentanaPrincipal> ventana(this);
+    std::thread([ventana, proceso]() {
+        WaitForSingleObject(proceso, INFINITE);
+        CloseHandle(proceso);
+        wxTheApp->CallAfter([ventana]() {
+            VentanaPrincipal* v = ventana.get();
+            if (!v) return;
+            v->m_comoInstalar->Enable();
+            v->LlenarDispositivos();
+            v->ArrancarAudio();
+            if (v->m_virtuales.empty())
+                ayuda::Aviso(L"Todavía no aparece el micrófono virtual. Reinicia la PC y abre Chachalaca otra vez.",
+                             L"Instalar el micrófono virtual", wxOK | wxICON_INFORMATION, v);
+        });
+    }).detach();
 }
 
 void VentanaPrincipal::ElegirEfecto(cha::Efecto e)
@@ -545,7 +652,7 @@ void VentanaPrincipal::MenuSonido(size_t i)
     else if (elegido == idNombre)
     {
         wxTextEntryDialog d(this, L"Nombre del sonido:", L"Cambiar el nombre", m_sonidos[i].datos.nombre);
-        d.SetOKCancelLabels(L"Aceptar", L"Cancelar");
+        BotonesEnEspanol(d);
         if (d.ShowModal() == wxID_OK && !d.GetValue().Trim().empty())
         {
             m_sonidos[i].datos.nombre = d.GetValue().Trim().ToStdWstring();
@@ -557,7 +664,7 @@ void VentanaPrincipal::MenuSonido(size_t i)
     {
         wxTextEntryDialog d(this, L"Volumen de este sonido, de 0 a 200 % (100 es el normal):", L"Volumen",
                             wxString::Format(L"%d", m_sonidos[i].datos.volumen));
-        d.SetOKCancelLabels(L"Aceptar", L"Cancelar");
+        BotonesEnEspanol(d);
         long v = 0;
         if (d.ShowModal() == wxID_OK && d.GetValue().Trim().ToLong(&v))
         {

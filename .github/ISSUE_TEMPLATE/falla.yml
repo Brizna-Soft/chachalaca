@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Gracias por avisar. Atarraya es gratis y sin publicidad; tus reportes lo hacen mejor para todos.
+        Gracias por avisar. Chachalaca es gratis y sin publicidad; tus reportes lo hacen mejor para todos.
         No pongas contraseñas ni datos personales.
   - type: textarea
     id: que-paso
@@ -19,8 +19,8 @@ body:
     attributes:
       label: ¿Qué hiciste antes de que fallara?
       placeholder: |
-        1. Abrí Atarraya
-        2. Pegué el enlace de...
+        1. Abrí Chachalaca
+        2. Elegí el efecto...
         3. ...
   - type: textarea
     id: esperabas
@@ -29,7 +29,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Versión de Atarraya
+      label: Versión de Chachalaca
       description: Está en Ayuda → Acerca de.
       placeholder: "0.1.0"
   - type: input
@@ -38,13 +38,18 @@ body:
       label: Versión de Windows
       placeholder: "Windows 11"
   - type: input
-    id: navegador
+    id: donde
     attributes:
-      label: Navegador (si tiene que ver)
-      placeholder: "Chrome, Edge, Brave, Firefox..."
+      label: ¿Dónde lo usas?
+      placeholder: "Discord, el nombre del juego..."
+  - type: input
+    id: microfono-virtual
+    attributes:
+      label: Micrófono virtual
+      placeholder: "VB-CABLE, Voicemeeter..."
   - type: textarea
     id: registro
     attributes:
       label: Registro (opcional)
-      description: Pega aquí el contenido de %LOCALAPPDATA%\Atarraya\registro.txt (solo anota los sitios, no direcciones completas).
+      description: Pega aquí el contenido de %LOCALAPPDATA%\Chachalaca\registro.txt (solo anota dispositivos y errores, no tus archivos).
       render: text

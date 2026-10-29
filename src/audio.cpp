@@ -358,15 +358,25 @@ std::vector<std::wstring> cha::MotorAudio::Salidas(std::wstring* predeterminado)
 
 bool cha::MotorAudio::EsMicrofonoVirtual(const std::wstring& nombreSalida)
 {
+    // VB-CABLE en un Windows en español se llama «Altavoces (VB-Audio Virtual Cable)»; en inglés, «CABLE Input (...)»
     const std::wstring n = Minusculas(nombreSalida);
-    return n.find(L"cable input") != std::wstring::npos || n.find(L"voicemeeter input") != std::wstring::npos
-        || n.find(L"voicemeeter aux input") != std::wstring::npos || n.find(L"voicemeeter vaio3 input") != std::wstring::npos;
+    return n.find(L"vb-audio virtual cable") != std::wstring::npos || n.find(L"cable input") != std::wstring::npos
+        || n.find(L"voicemeeter input") != std::wstring::npos || n.find(L"voicemeeter aux input") != std::wstring::npos
+        || n.find(L"voicemeeter vaio3 input") != std::wstring::npos;
+}
+
+bool cha::MotorAudio::EsSalidaDeCable(const std::wstring& nombreEntrada)
+{
+    const std::wstring n = Minusculas(nombreEntrada);
+    return n.find(L"vb-audio") != std::wstring::npos || n.find(L"cable output") != std::wstring::npos
+        || n.find(L"voicemeeter out") != std::wstring::npos;
 }
 
 std::wstring cha::MotorAudio::NombreParaElegir(const std::wstring& nombreSalida)
 {
     const std::wstring n = Minusculas(nombreSalida);
-    if (n.find(L"cable input") != std::wstring::npos) return L"CABLE Output";
+    if (n.find(L"vb-audio virtual cable") != std::wstring::npos || n.find(L"cable input") != std::wstring::npos)
+        return L"CABLE Output";
     if (n.find(L"voicemeeter aux input") != std::wstring::npos) return L"Voicemeeter Out B2";
     if (n.find(L"voicemeeter vaio3 input") != std::wstring::npos) return L"Voicemeeter Out B3";
     if (n.find(L"voicemeeter input") != std::wstring::npos) return L"Voicemeeter Out B1";

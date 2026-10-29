@@ -38,6 +38,8 @@ namespace cha
         std::vector<std::wstring> Microfonos(std::wstring* predeterminado = nullptr);
         std::vector<std::wstring> Salidas(std::wstring* predeterminado = nullptr);
         static bool EsMicrofonoVirtual(const std::wstring& nombreSalida);
+        // Entradas que son la otra punta de un cable virtual («CABLE Output»): nunca sirven como tu micrófono
+        static bool EsSalidaDeCable(const std::wstring& nombreEntrada);
         // Lo que hay que elegir en Discord para esa salida («CABLE Output» para «CABLE Input»)
         static std::wstring NombreParaElegir(const std::wstring& nombreSalida);
 

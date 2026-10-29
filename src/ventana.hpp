@@ -46,6 +46,8 @@ private:
     wxPanel* m_panel = nullptr;
     wxStaticText* m_estado = nullptr;
     wxButton* m_comoInstalar = nullptr;
+    wxButton* m_arreglarWindows = nullptr;
+    std::wstring m_micWindows, m_salidaWindows;   // los que usa Windows ahora
     wxChoice* m_eligeMic = nullptr;
     wxChoice* m_eligeVirtual = nullptr;
     wxChoice* m_eligeEscucha = nullptr;
@@ -64,6 +66,7 @@ private:
     void LlenarDispositivos();
     void ArrancarAudio();
     void MostrarEstado(const wxString& texto, bool bien, bool faltaVirtual);
+    void InstalarMicrofonoVirtual();
     void ElegirEfecto(cha::Efecto e);
     void RehacerTablero();
     void Tocar(size_t i);

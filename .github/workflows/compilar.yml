@@ -71,10 +71,11 @@ jobs:
           $notas = @"
           Chachalaca ${version}: sonidos y cambio de voz en tu micrófono, gratis, sin publicidad y sin recoger datos.
 
-          1. Instala el micrófono virtual gratis VB-CABLE: https://vb-audio.com/Cable/
-          2. Baja ``Chachalaca-$version-x64.zip``, descomprímelo y abre ``Chachalaca.exe``.
-          3. Si Windows dice «Windows protegió su PC», pulsa «Más información» y luego «Ejecutar de todas formas»
+          1. Baja ``Chachalaca-$version-x64.zip``, descomprímelo y abre ``Chachalaca.exe``.
+          2. Si Windows dice «Windows protegió su PC», pulsa «Más información» y luego «Ejecutar de todas formas»
              (el programa es nuevo y aún no tiene firma digital).
+          3. Si falta el micrófono virtual, pulsa «Instalar el micrófono virtual»: viene adentro. Es VB-CABLE, de
+             VB-Audio (https://vb-cable.com), donationware incluido tal cual con su permiso para programas gratis.
           4. En Discord o en tu juego, elige «CABLE Output» como micrófono.
           5. La huella SHA-256 está en el archivo ``.sha256``. Este .zip lo armó GitHub a partir de este mismo código.
           "@

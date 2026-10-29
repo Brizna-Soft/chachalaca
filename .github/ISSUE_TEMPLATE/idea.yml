@@ -1,5 +1,5 @@
 name: Tengo una idea
-description: Algo que te gustaría que Atarraya hiciera
+description: Algo que te gustaría que Chachalaca hiciera
 labels: ["idea"]
 body:
   - type: textarea
