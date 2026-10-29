@@ -15,6 +15,7 @@ class wxButton;
 class wxCheckBox;
 class wxChoice;
 class wxGauge;
+class wxGridSizer;
 class wxPanel;
 class wxScrolledWindow;
 class wxSizer;
@@ -67,7 +68,7 @@ private:
     wxGauge* m_nivel = nullptr;
     std::vector<wxToggleButton*> m_efectos;
     wxScrolledWindow* m_tablero = nullptr;
-    wxSizer* m_tableroSizer = nullptr;
+    wxGridSizer* m_tableroSizer = nullptr;   // columnas según el ancho (ver AjustarColumnas)
 
     void CrearControles();
     void LlenarDispositivos();
@@ -76,6 +77,7 @@ private:
     void InstalarMicrofonoVirtual();
     void ElegirEfecto(cha::Efecto e);
     void RehacerTablero();
+    void AjustarColumnas();
     void Tocar(size_t i);
     void MenuSonido(size_t i);
     void CambiarAtajo(size_t i);

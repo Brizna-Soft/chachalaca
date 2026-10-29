@@ -23,7 +23,6 @@
 #include <wx/stattext.h>
 #include <wx/textdlg.h>
 #include <wx/tglbtn.h>
-#include <wx/wrapsizer.h>
 
 #include <wx/app.h>
 #include <wx/msgdlg.h>
@@ -229,7 +228,7 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
     RehacerTablero();
 
     // Tamaño y posición de la última vez (si sigue dentro de una pantalla)
-    SetMinSize(FromDIP(wxSize(640, 560)));
+    SetMinSize(FromDIP(wxSize(760, 560)));   // menos ancho y «Robot autotune» ya no cabe en su botón
     wxSize tamano = FromDIP(wxSize(840, 800));
     if (m_ajustes.ancho > 300 && m_ajustes.alto > 300) tamano = wxSize(m_ajustes.ancho, m_ajustes.alto);
     SetSize(tamano);
@@ -399,8 +398,16 @@ void VentanaPrincipal::CrearControles()
 
     m_tablero = new wxScrolledWindow(cajaSon, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
     m_tablero->SetScrollRate(0, FromDIP(10));
-    m_tableroSizer = new wxWrapSizer(wxHORIZONTAL, 0);   // sin estirar el último botón de cada fila
-    m_tablero->SetSizer(m_tableroSizer);
+    // Rejilla con tantas columnas como quepan: así cada fila mide lo que debe y las que no caben se ven bajando
+    // (con una de ajuste automático, la última fila quedaba aplastada en vez de poder bajar hasta ella)
+    m_tableroSizer = new wxGridSizer(4, FromDIP(8), FromDIP(8));
+    auto* envoltura = new wxBoxSizer(wxVERTICAL);   // para que las filas no se estiren a lo alto
+    envoltura->Add(m_tableroSizer, 0, wxALL, FromDIP(2));
+    m_tablero->SetSizer(envoltura);
+    m_tablero->Bind(wxEVT_SIZE, [this](wxSizeEvent& e) {
+        e.Skip();
+        CallAfter([this]() { AjustarColumnas(); });
+    });
     grupoSon->Add(m_tablero, 1, wxEXPAND | wxALL, FromDIP(3));
     caja->Add(grupoSon, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borde);
 
@@ -649,6 +656,20 @@ int VentanaPrincipal::AgregarSonidosDeFabrica()
     return encontrados;
 }
 
+void VentanaPrincipal::AjustarColumnas()
+{
+    if (!m_tablero || !m_tableroSizer) return;
+    int columnas = 1;
+    if (!m_sonidos.empty())
+    {
+        const int ancho = m_tablero->GetClientSize().GetWidth();
+        columnas = std::max(1, (ancho + FromDIP(8)) / (FromDIP(150) + FromDIP(8)));
+    }
+    if (columnas != m_tableroSizer->GetCols()) m_tableroSizer->SetCols(columnas);
+    m_tablero->FitInside();
+    m_tablero->Layout();
+}
+
 void VentanaPrincipal::RehacerTablero()
 {
     m_tablero->Freeze();
@@ -671,10 +692,9 @@ void VentanaPrincipal::RehacerTablero()
         b->SetToolTip(s.audio ? wxString(L"Clic para tocar. Clic derecho para el atajo, el nombre y más.") : wxString(s.error));
         b->Bind(wxEVT_BUTTON, [this, i](wxCommandEvent&) { Tocar(i); });
         b->Bind(wxEVT_CONTEXT_MENU, [this, i](wxContextMenuEvent&) { MenuSonido(i); });
-        m_tableroSizer->Add(b, 0, wxALL, FromDIP(4));
+        m_tableroSizer->Add(b, 0);
     }
-    m_tablero->FitInside();
-    m_tablero->Layout();
+    AjustarColumnas();
     m_tablero->Thaw();
 }
 
