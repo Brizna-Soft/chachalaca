@@ -30,6 +30,9 @@ find_package(nlohmann_json CONFIG REQUIRED)
 # miniaudio y signalsmith-stretch son solo encabezados
 find_path(MINIAUDIO_INCLUDE_DIRS "miniaudio.h" REQUIRED)
 find_path(SIGNALSMITH_INCLUDE_DIRS "signalsmith-stretch/signalsmith-stretch.h" REQUIRED)
+# SpeexDSP (quitar ruido): vcpkg instala la biblioteca sin archivo de CMake
+find_path(SPEEXDSP_INCLUDE_DIRS "speex/speex_preprocess.h" REQUIRED)
+find_library(SPEEXDSP_LIBRARY NAMES speexdsp libspeexdsp REQUIRED)
 
 configure_file(src/version.h.in "${CMAKE_CURRENT_BINARY_DIR}/generado/version.h" @ONLY)
 
@@ -40,14 +43,20 @@ set(DEFINICIONES UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0A
 file(GLOB FUENTES CONFIGURE_DEPENDS src/*.cpp src/*.hpp src/*.c src/*.h)
 add_executable(Chachalaca WIN32 ${FUENTES} res/app.rc)
 target_include_directories(Chachalaca PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generado"
-    ${MINIAUDIO_INCLUDE_DIRS} ${SIGNALSMITH_INCLUDE_DIRS})
+    ${MINIAUDIO_INCLUDE_DIRS} ${SIGNALSMITH_INCLUDE_DIRS} ${SPEEXDSP_INCLUDE_DIRS})
 target_compile_definitions(Chachalaca PRIVATE ${DEFINICIONES})
 target_compile_options(Chachalaca PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${OPCIONES_CXX}> $<$<COMPILE_LANGUAGE:C>:/utf-8 /guard:cf>)
 target_link_options(Chachalaca PRIVATE /MANIFEST:NO /guard:cf)
 target_link_libraries(Chachalaca PRIVATE
     wx::core wx::base
     nlohmann_json::nlohmann_json
+    ${SPEEXDSP_LIBRARY}
     shlwapi winhttp wintrust crypt32 bcrypt)
+
+# --- Hace los sonidos que trae Chachalaca (los inventa desde cero; no se publica el .exe, sí los sonidos) ---
+add_executable(generar-sonidos herramientas/generar-sonidos.cpp)
+target_compile_definitions(generar-sonidos PRIVATE ${DEFINICIONES})
+target_compile_options(generar-sonidos PRIVATE ${OPCIONES_CXX})
 
 # --- Prueba sin ventana: graba de una entrada para comprobar el micrófono virtual (no se publica) ---
 add_executable(prueba-cable pruebas/prueba-cable.cpp src/miniaudio.c src/instalador.cpp src/util.cpp)

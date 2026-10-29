@@ -7,9 +7,12 @@ La chachalaca es el pájaro más escandaloso del monte: este programa hace que t
 
 ## Qué hace
 
-- **Tablero de sonidos:** agrega tus sonidos (WAV, MP3 o FLAC) y tócalos con un clic o con un atajo de teclado,
-  incluso dentro de un juego. La tecla **Pausa** detiene todos.
-- **Cambio de voz en vivo:** Grave, Aguda, Ardilla, Monstruo, Robot, Eco, Radio y Cueva.
+- **Tablero de sonidos:** trae 16 sonidos hechos por Brizna Soft (trombón triste, bocina, wiii, boing, ba dum tss,
+  grillos, redoble, sirena, láser, explosión y más). Agrega los tuyos (WAV, MP3 o FLAC) y tócalos con un clic o con
+  un atajo de teclado, incluso dentro de un juego. La tecla **Pausa** detiene todos.
+- **Cambio de voz en vivo:** Grave, Aguda, Ardilla, Monstruo, Duende, Ratón, Caricatura, Robot, Autotune,
+  Robot autotune, Eco, Radio y Cueva.
+- **Micrófono limpio:** quita el ruido de fondo y, si quieres, calla tu micrófono cuando no hablas.
 - **Tú decides qué escuchas:** puedes oír los sonidos y tu voz cambiada en tus audífonos, o no.
 - Mezcla tu voz con los sonidos, así que tus amigos oyen las dos cosas a la vez.
 

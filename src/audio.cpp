@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cwctype>
 
+#include "limpieza.hpp"
 #include "ma.h"
 #include "util.hpp"
 
@@ -135,6 +136,7 @@ struct cha::MotorAudio::Impl
     bool anilloListo = false;
     bool conVirtual = false, sinMicrofono = false;
 
+    LimpiadorVoz limpiador{ Frecuencia };
     ProcesadorVoz voz{ Frecuencia };
     ColaComandos cola;
     std::array<Reproduccion, MaxSonando> sonando;
@@ -142,6 +144,7 @@ struct cha::MotorAudio::Impl
     std::atomic<float> nivel{ 0.0f };
 
     std::vector<float> bufVoz = std::vector<float>(ProcesadorVoz::BloqueMaximo);
+    std::vector<float> bufLimpio = std::vector<float>(ProcesadorVoz::BloqueMaximo);
     std::vector<float> bufSonidos = std::vector<float>((size_t)ProcesadorVoz::BloqueMaximo * Canales);
     std::vector<float> bufEscucha = std::vector<float>((size_t)ProcesadorVoz::BloqueMaximo * Canales);
 
@@ -232,6 +235,8 @@ struct cha::MotorAudio::Impl
         }
 
         const auto efectoActual = (Efecto)dueno->efecto.load(std::memory_order_relaxed);
+        const bool limpiarRuido = dueno->quitarRuido.load(std::memory_order_relaxed);
+        const bool callarSinVoz = dueno->soloVoz.load(std::memory_order_relaxed);
         const bool pasarVoz = dueno->vozActiva.load(std::memory_order_relaxed);
         const bool oirVoz = dueno->escucharmeVoz.load(std::memory_order_relaxed);
         const bool oirSonidos = dueno->escucharSonidos.load(std::memory_order_relaxed);
@@ -256,7 +261,8 @@ struct cha::MotorAudio::Impl
                     limpia[i] = std::isfinite(x) ? std::clamp(x, -4.0f, 4.0f) : 0.0f;
                     pico = std::max(pico, std::fabs(limpia[i]));
                 }
-                voz.Procesar(efectoActual, limpia, bufVoz.data(), n);
+                limpiador.Procesar(limpia, bufLimpio.data(), n, limpiarRuido, callarSinVoz);
+                voz.Procesar(efectoActual, bufLimpio.data(), bufVoz.data(), n);
             }
             else
             {

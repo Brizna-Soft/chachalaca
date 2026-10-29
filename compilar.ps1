@@ -71,4 +71,8 @@ if ($LASTEXITCODE -ne 0) { throw "Falló la compilación (código $LASTEXITCODE)
 Paso 'Copiando el programa'
 New-Item -ItemType Directory -Force $programa | Out-Null
 Copy-Item (Join-Path $build 'Release\Chachalaca.exe') $programa -Force
+
+Paso 'Haciendo los sonidos que trae Chachalaca'
+& (Join-Path $build 'Release\generar-sonidos.exe') (Join-Path $programa 'sonidos')
+if ($LASTEXITCODE -ne 0) { throw "No pude hacer los sonidos (código $LASTEXITCODE)" }
 Write-Host "Listo: $programa" -ForegroundColor Green

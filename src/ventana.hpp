@@ -27,6 +27,8 @@ class VentanaPrincipal : public wxFrame
 public:
     VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes);
     void AgregarArchivos(const wxArrayString& archivos);
+    // Los sonidos que trae Chachalaca (carpeta «sonidos» junto al programa); se saltan los que ya están
+    void AgregarSonidosDeFabrica();
 
 private:
     struct SonidoEnTablero
@@ -54,6 +56,8 @@ private:
     wxChoice* m_eligeVirtual = nullptr;
     wxChoice* m_eligeEscucha = nullptr;
     std::vector<std::wstring> m_mics, m_virtuales, m_escuchas;   // en el mismo orden que las listas (sin la opción 0)
+    wxCheckBox* m_quitarRuido = nullptr;
+    wxCheckBox* m_soloVoz = nullptr;
     wxCheckBox* m_pasarVoz = nullptr;
     wxCheckBox* m_escucharme = nullptr;
     wxCheckBox* m_escucharSonidos = nullptr;

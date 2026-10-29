@@ -22,6 +22,9 @@ void cha::Ajustes::Cargar()
         microfonoVirtual = Ancho(j.value("microfonoVirtual", ""));
         escucharEn = Ancho(j.value("escucharEn", ""));
         efecto = j.value("efecto", "normal");
+        quitarRuido = j.value("quitarRuido", true);
+        soloVoz = j.value("soloVoz", false);
+        sonidosDeFabrica = j.value("sonidosDeFabrica", false);
         vozActiva = j.value("vozActiva", true);
         escucharmeVoz = j.value("escucharmeVoz", false);
         escucharSonidos = j.value("escucharSonidos", true);
@@ -63,7 +66,8 @@ void cha::Ajustes::Guardar() const
     }
     nlohmann::json j = {
         { "microfono", Utf8(microfono) }, { "microfonoVirtual", Utf8(microfonoVirtual) }, { "escucharEn", Utf8(escucharEn) },
-        { "efecto", efecto }, { "vozActiva", vozActiva }, { "escucharmeVoz", escucharmeVoz },
+        { "efecto", efecto }, { "quitarRuido", quitarRuido }, { "soloVoz", soloVoz }, { "sonidosDeFabrica", sonidosDeFabrica },
+        { "vozActiva", vozActiva }, { "escucharmeVoz", escucharmeVoz },
         { "escucharSonidos", escucharSonidos }, { "volumenVoz", volumenVoz }, { "volumenSonidos", volumenSonidos },
         { "sonidos", lista },
         { "x", x }, { "y", y }, { "ancho", ancho }, { "alto", alto }, { "maximizada", maximizada },

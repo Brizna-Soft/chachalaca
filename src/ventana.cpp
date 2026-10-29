@@ -19,6 +19,7 @@
 #include <wx/sizer.h>
 #include <wx/slider.h>
 #include <wx/statbox.h>
+#include <wx/stdpaths.h>
 #include <wx/stattext.h>
 #include <wx/textdlg.h>
 #include <wx/tglbtn.h>
@@ -44,6 +45,16 @@ namespace
     constexpr int IdAtajoDetener = 0x0FFF;   // la tecla Pausa detiene todos los sonidos
     constexpr int IdAtajoPrimero = 0x1000;   // un atajo por sonido: 0x1000 + número del sonido
     const wchar_t* PaginaCable = L"https://vb-audio.com/Cable/";
+
+    // Los sonidos que trae Chachalaca: los hizo Brizna Soft desde cero (licencia MIT), en este orden
+    const struct { const wchar_t* archivo; const wchar_t* nombre; } SonidosDeFabrica[] = {
+        { L"trombon-triste.wav", L"Trombón triste" }, { L"bocina.wav", L"Bocina" }, { L"wiii.wav", L"Wiii" },
+        { L"uuu-se-cae.wav", L"Uuu, se cae" }, { L"boing.wav", L"Boing" }, { L"ba-dum-tss.wav", L"Ba dum tss" },
+        { L"redoble.wav", L"Redoble" }, { L"victoria.wav", L"Victoria" }, { L"error.wav", L"Error" },
+        { L"ding.wav", L"Ding" }, { L"grillos.wav", L"Grillos" }, { L"sirena.wav", L"Sirena" },
+        { L"laser.wav", L"Láser" }, { L"explosion.wav", L"Explosión" }, { L"pedo.wav", L"Pedo" },
+        { L"suspenso.wav", L"Suspenso" },
+    };
 
     const wchar_t* Descripcion =
         L"Chachalaca pone sonidos en tu micrófono y te cambia la voz, para Discord y para los juegos "
@@ -181,9 +192,11 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
     // Menú
     auto* barra = new wxMenuBar();
     auto* archivo = new wxMenu();
-    int idAgregar = wxWindow::NewControlId();
+    int idAgregar = wxWindow::NewControlId(), idDeFabrica = wxWindow::NewControlId();
     archivo->Append(idAgregar, L"&Agregar sonidos...\tCtrl+O");
+    archivo->Append(idDeFabrica, L"Agregar los sonidos que trae &Chachalaca");
     archivo->AppendSeparator();
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { AgregarSonidosDeFabrica(); }, idDeFabrica);
     archivo->Append(wxID_EXIT, L"&Salir");
     barra->Append(archivo, L"&Archivo");
     barra->Append(ayuda::CrearMenu(this, Descripcion), L"A&yuda");
@@ -209,6 +222,12 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
         s.datos = g;
         s.audio = cha::CargarSonido(g.ruta, s.error);
         m_sonidos.push_back(std::move(s));
+    }
+    // La primera vez se agregan los sonidos que trae Chachalaca (después la persona decide)
+    if (!m_ajustes.sonidosDeFabrica)
+    {
+        m_ajustes.sonidosDeFabrica = true;
+        AgregarSonidosDeFabrica();
     }
     RehacerTablero();
 
@@ -314,12 +333,32 @@ void VentanaPrincipal::CrearControles()
     filaVoz->Add(m_nivel, 1, wxALIGN_CENTER_VERTICAL);
     grupoVoz->Add(filaVoz, 0, wxEXPAND | wxALL, FromDIP(6));
 
+    // Limpieza del micrófono, antes del efecto
+    auto* filaLimpieza = new wxBoxSizer(wxHORIZONTAL);
+    m_quitarRuido = new wxCheckBox(cajaVoz, wxID_ANY, L"Quitar ruido de fondo");
+    m_quitarRuido->SetValue(m_ajustes.quitarRuido);
+    m_quitarRuido->SetToolTip(L"Quita el ventilador, el aire, el zumbido y otros ruidos parejos de tu micrófono");
+    m_quitarRuido->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        m_motor.quitarRuido = m_quitarRuido->GetValue();
+        Guardar();
+    });
+    filaLimpieza->Add(m_quitarRuido, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(14));
+    m_soloVoz = new wxCheckBox(cajaVoz, wxID_ANY, L"Callar el micrófono cuando no hablo");
+    m_soloVoz->SetValue(m_ajustes.soloVoz);
+    m_soloVoz->SetToolTip(L"Tus amigos no oyen el teclado ni lo que pasa en tu cuarto mientras no hablas");
+    m_soloVoz->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        m_motor.soloVoz = m_soloVoz->GetValue();
+        Guardar();
+    });
+    filaLimpieza->Add(m_soloVoz, 0, wxALIGN_CENTER_VERTICAL);
+    grupoVoz->Add(filaLimpieza, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
+
     // Los efectos en una rejilla fija (una de ajuste automático se estira mal dentro de la caja)
-    auto* filaEfectos = new wxGridSizer(5, FromDIP(6), FromDIP(6));
+    auto* filaEfectos = new wxGridSizer(7, FromDIP(6), FromDIP(6));
     for (int i = 0; i < (int)cha::Efecto::Cantidad; i++)
     {
         auto e = (cha::Efecto)i;
-        auto* b = new wxToggleButton(cajaVoz, wxID_ANY, cha::NombreEfecto(e), wxDefaultPosition, FromDIP(wxSize(96, 32)));
+        auto* b = new wxToggleButton(cajaVoz, wxID_ANY, cha::NombreEfecto(e), wxDefaultPosition, FromDIP(wxSize(88, 32)));
         b->Bind(wxEVT_TOGGLEBUTTON, [this, e](wxCommandEvent&) { ElegirEfecto(e); });
         filaEfectos->Add(b, 0, wxEXPAND);
         m_efectos.push_back(b);
@@ -371,6 +410,8 @@ void VentanaPrincipal::CrearControles()
     m_panel->SetSizer(caja);
 
     // Valores iniciales para el motor
+    m_motor.quitarRuido = m_ajustes.quitarRuido;
+    m_motor.soloVoz = m_ajustes.soloVoz;
     m_motor.vozActiva = m_ajustes.vozActiva;
     m_motor.escucharmeVoz = m_ajustes.escucharmeVoz;
     m_motor.escucharSonidos = m_ajustes.escucharSonidos;
@@ -581,6 +622,34 @@ void VentanaPrincipal::AgregarArchivos(const wxArrayString& archivos)
     if (!errores.empty()) ayuda::Aviso(L"Estos no se pudieron agregar:\n\n" + errores, L"Agregar sonidos", wxOK | wxICON_WARNING, this);
 }
 
+void VentanaPrincipal::AgregarSonidosDeFabrica()
+{
+    wxString carpeta = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() + L"\\sonidos\\";
+    int agregados = 0;
+    for (const auto& f : SonidosDeFabrica)
+    {
+        std::wstring ruta = (carpeta + f.archivo).ToStdWstring();
+        if (!cha::ExisteArchivo(ruta) || m_sonidos.size() >= cha::MaxSonidos) continue;
+        bool yaEsta = std::any_of(m_sonidos.begin(), m_sonidos.end(), [&](const SonidoEnTablero& s) {
+            return _wcsicmp(s.datos.ruta.c_str(), ruta.c_str()) == 0;
+        });
+        if (yaEsta) continue;
+        SonidoEnTablero s;
+        s.datos.ruta = ruta;
+        s.datos.nombre = f.nombre;
+        s.audio = cha::CargarSonido(ruta, s.error);
+        if (!s.audio) continue;
+        m_sonidos.push_back(std::move(s));
+        agregados++;
+    }
+    if (m_tablero && agregados > 0 && IsShown())
+    {
+        Guardar();
+        RehacerTablero();
+        RegistrarAtajos();
+    }
+}
+
 void VentanaPrincipal::RehacerTablero()
 {
     m_tablero->Freeze();
@@ -757,6 +826,8 @@ void VentanaPrincipal::AlReloj(wxTimerEvent&)
 
 void VentanaPrincipal::Guardar()
 {
+    m_ajustes.quitarRuido = m_quitarRuido->GetValue();
+    m_ajustes.soloVoz = m_soloVoz->GetValue();
     m_ajustes.vozActiva = m_pasarVoz->GetValue();
     m_ajustes.escucharmeVoz = m_escucharme->GetValue();
     m_ajustes.escucharSonidos = m_escucharSonidos->GetValue();

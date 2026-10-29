@@ -5,7 +5,12 @@
 
 namespace cha
 {
-    enum class Efecto : int { Normal, Grave, Aguda, Ardilla, Monstruo, Robot, Eco, Radio, Cueva, Cantidad };
+    enum class Efecto : int
+    {
+        Normal, Grave, Aguda, Ardilla, Monstruo, Duende, Raton, Caricatura,
+        Robot, Autotune, RobotAutotune, Eco, Radio, Cueva,
+        Cantidad
+    };
 
     const wchar_t* NombreEfecto(Efecto e);   // para la persona
     const char* ClaveEfecto(Efecto e);       // para guardar en los ajustes

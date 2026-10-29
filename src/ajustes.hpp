@@ -23,6 +23,9 @@ namespace cha
         std::wstring microfonoVirtual;  // la salida que va al micrófono virtual (por ejemplo «CABLE Input»)
         std::wstring escucharEn;        // vacío = la salida de Windows
         std::string efecto = "normal";
+        bool quitarRuido = true;
+        bool soloVoz = false;
+        bool sonidosDeFabrica = false;   // ya se agregaron una vez los sonidos que trae Chachalaca
         bool vozActiva = true;
         bool escucharmeVoz = false;
         bool escucharSonidos = true;

@@ -54,6 +54,8 @@ namespace cha
 
         // Controles: se pueden cambiar desde cualquier hilo
         std::atomic<int> efecto{ 0 };
+        std::atomic<bool> quitarRuido{ false };   // quitar el ruido de fondo de tu micrófono
+        std::atomic<bool> soloVoz{ false };       // callar el micrófono cuando no hablas
         std::atomic<bool> vozActiva{ true };
         std::atomic<bool> escucharmeVoz{ false };
         std::atomic<bool> escucharSonidos{ true };

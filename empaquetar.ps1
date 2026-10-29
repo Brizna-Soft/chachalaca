@@ -14,6 +14,8 @@ if (-not (Test-Path (Join-Path $programa 'Chachalaca.exe'))) { throw "Falta Chac
 if (Test-Path $temporal) { Remove-Item -Recurse -Force $temporal }
 New-Item -ItemType Directory -Force $temporal | Out-Null
 Copy-Item (Join-Path $programa 'Chachalaca.exe') $temporal
+if (-not (Test-Path (Join-Path $programa 'sonidos\trombon-triste.wav'))) { throw 'Faltan los sonidos en programa\sonidos. Compila primero.' }
+Copy-Item (Join-Path $programa 'sonidos') (Join-Path $temporal 'sonidos') -Recurse
 Copy-Item (Join-Path $raiz 'LICENSE') (Join-Path $temporal 'LICENCIA.txt')
 Copy-Item (Join-Path $raiz 'AVISOS-DE-TERCEROS.txt') $temporal
 
@@ -53,7 +55,8 @@ Chachalaca $version - sonidos y cambio de voz en tu micrófono, gratis, de Brizn
    Windows te pide permiso de administrador. Si después no oyes tus juegos, elige tus audífonos en
    Configuración > Sonido > Salida (Chachalaca te avisa).
 4. En Discord o en tu juego, elige "CABLE Output" como micrófono.
-   En Discord, apaga la supresión de ruido para que se escuchen bien los sonidos.
+   En Discord, apaga la supresión de ruido para que se escuchen bien los sonidos (Chachalaca trae la suya).
+5. Trae 16 sonidos hechos por Brizna Soft (carpeta "sonidos"). Para agregar los tuyos, arrástralos a la ventana.
 
 Ayuda, novedades y reportes de problemas: https://github.com/Brizna-Soft/chachalaca
 Sin publicidad, sin virus y sin recoger tus datos. Licencia MIT.
