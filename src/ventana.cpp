@@ -233,7 +233,7 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
 
     // Tamaño y posición de la última vez (si sigue dentro de una pantalla)
     SetMinSize(FromDIP(wxSize(640, 560)));
-    wxSize tamano = FromDIP(wxSize(820, 720));
+    wxSize tamano = FromDIP(wxSize(840, 800));
     if (m_ajustes.ancho > 300 && m_ajustes.alto > 300) tamano = wxSize(m_ajustes.ancho, m_ajustes.alto);
     SetSize(tamano);
     if (m_ajustes.x != -1 && wxDisplay::GetFromPoint(wxPoint(m_ajustes.x + 40, m_ajustes.y + 20)) != wxNOT_FOUND)
