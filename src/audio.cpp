@@ -14,8 +14,14 @@
 namespace
 {
     constexpr int Canales = 2;
-    constexpr size_t MaxCuadrosSonido = (size_t)cha::Frecuencia * 60 * 10;   // 10 minutos
+    constexpr size_t MaxCuadrosSonido = (size_t)cha::Frecuencia * 60 * 5;   // 5 minutos (unos 115 MB en memoria)
+    constexpr long long MaxBytesArchivo = 100LL * 1024 * 1024;
     constexpr int MaxSonando = 16;
+    constexpr int MaxComandosPorVuelta = 32;
+
+    // El hilo de audio lee estos valores: tienen que ser sin candados
+    static_assert(std::atomic<float>::is_always_lock_free && std::atomic<int>::is_always_lock_free
+                  && std::atomic<bool>::is_always_lock_free);
 
     enum class Orden { Tocar, DetenerTodo };
 
@@ -60,9 +66,10 @@ namespace
         float volumen = 1.0f;
     };
 
-    // Recorta suave arriba de 0.9 para que nunca se escuche «roto»
+    // Recorta suave arriba de 0.9 para que nunca se escuche «roto» (y nunca deja pasar valores raros)
     float Limitar(float x)
     {
+        if (!std::isfinite(x)) return 0.0f;
         float a = std::fabs(x);
         if (a <= 0.9f) return x;
         float y = 0.9f + 0.1f * std::tanh((a - 0.9f) / 0.1f);
@@ -78,6 +85,13 @@ namespace
 
 std::shared_ptr<const cha::Sonido> cha::CargarSonido(const std::wstring& ruta, std::wstring& error)
 {
+    WIN32_FILE_ATTRIBUTE_DATA datos;
+    if (GetFileAttributesExW(ruta.c_str(), GetFileExInfoStandard, &datos)
+        && (((long long)datos.nFileSizeHigh << 32) | datos.nFileSizeLow) > MaxBytesArchivo)
+    {
+        error = L"El archivo pesa más de 100 MB. Usa un sonido más corto.";
+        return nullptr;
+    }
     ma_decoder_config c = ma_decoder_config_init(ma_format_f32, Canales, Frecuencia);
     ma_decoder d;
     if (ma_decoder_init_file_w(ruta.c_str(), &c, &d) != MA_SUCCESS)
@@ -97,7 +111,7 @@ std::shared_ptr<const cha::Sonido> cha::CargarSonido(const std::wstring& ruta, s
         if (s->muestras.size() / Canales > MaxCuadrosSonido)
         {
             ma_decoder_uninit(&d);
-            error = L"El sonido dura más de 10 minutos. Usa uno más corto.";
+            error = L"El sonido dura más de 5 minutos. Usa uno más corto.";
             return nullptr;
         }
     }
@@ -195,9 +209,9 @@ struct cha::MotorAudio::Impl
 
     void Procesar(float* salida, const float* entrada, ma_uint32 total)
     {
-        // Órdenes de la ventana
+        // Órdenes de la ventana (unas pocas por vuelta, para no tardar)
         Comando c;
-        while (cola.Sacar(c))
+        for (int k = 0; k < MaxComandosPorVuelta && cola.Sacar(c); k++)
         {
             if (c.orden == Orden::DetenerTodo)
             {
@@ -217,7 +231,7 @@ struct cha::MotorAudio::Impl
             }
         }
 
-        const auto efecto = (Efecto)dueno->efecto.load(std::memory_order_relaxed);
+        const auto efectoActual = (Efecto)dueno->efecto.load(std::memory_order_relaxed);
         const bool pasarVoz = dueno->vozActiva.load(std::memory_order_relaxed);
         const bool oirVoz = dueno->escucharmeVoz.load(std::memory_order_relaxed);
         const bool oirSonidos = dueno->escucharSonidos.load(std::memory_order_relaxed);
@@ -234,9 +248,15 @@ struct cha::MotorAudio::Impl
             // Tu voz, con el efecto
             if (entrada && (pasarVoz || oirVoz))
             {
-                const float* in = entrada + hecho;
-                for (int i = 0; i < n; i++) pico = std::max(pico, std::fabs(in[i]));
-                voz.Procesar(efecto, in, bufVoz.data(), n);
+                // Se copia limpia: una muestra rara (infinita o NaN) dañaría los filtros para siempre
+                float* limpia = bufEscucha.data();
+                for (int i = 0; i < n; i++)
+                {
+                    const float x = entrada[hecho + i];
+                    limpia[i] = std::isfinite(x) ? std::clamp(x, -4.0f, 4.0f) : 0.0f;
+                    pico = std::max(pico, std::fabs(limpia[i]));
+                }
+                voz.Procesar(efectoActual, limpia, bufVoz.data(), n);
             }
             else
             {
@@ -254,11 +274,16 @@ struct cha::MotorAudio::Impl
             {
                 if (!r.sonido) continue;
                 const Sonido& s = *r.sonido;
-                const size_t m = std::min<size_t>(s.cuadros - r.pos, (size_t)n);
+                if (r.pos >= s.cuadros || s.muestras.size() < s.cuadros * Canales)
+                {
+                    r.sonido.reset();
+                    continue;
+                }
+                const size_t cuantos = std::min<size_t>(s.cuadros - r.pos, (size_t)n);
                 const float* origen = s.muestras.data() + r.pos * Canales;
                 const float v = r.volumen * gSonidos;
-                for (size_t i = 0; i < m * Canales; i++) bufSonidos[i] += origen[i] * v;
-                r.pos += m;
+                for (size_t i = 0; i < cuantos * Canales; i++) bufSonidos[i] += origen[i] * v;
+                r.pos += cuantos;
                 if (r.pos >= s.cuadros) r.sonido.reset();
                 else activos++;
             }

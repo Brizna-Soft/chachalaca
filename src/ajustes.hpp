@@ -5,6 +5,8 @@
 
 namespace cha
 {
+    constexpr size_t MaxSonidos = 200;
+
     struct SonidoGuardado
     {
         std::wstring ruta;

@@ -47,7 +47,7 @@ target_link_options(Chachalaca PRIVATE /MANIFEST:NO /guard:cf)
 target_link_libraries(Chachalaca PRIVATE
     wx::core wx::base
     nlohmann_json::nlohmann_json
-    shlwapi winhttp wintrust crypt32)
+    shlwapi winhttp wintrust crypt32 bcrypt)
 
 # --- Prueba sin ventana: graba de una entrada para comprobar el micrófono virtual (no se publica) ---
 add_executable(prueba-cable pruebas/prueba-cable.cpp src/miniaudio.c src/instalador.cpp src/util.cpp)
@@ -55,4 +55,4 @@ target_include_directories(prueba-cable PRIVATE src ${MINIAUDIO_INCLUDE_DIRS})
 target_compile_definitions(prueba-cable PRIVATE ${DEFINICIONES})
 target_compile_options(prueba-cable PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${OPCIONES_CXX}> $<$<COMPILE_LANGUAGE:C>:/utf-8 /guard:cf>)
 target_link_options(prueba-cable PRIVATE /guard:cf)
-target_link_libraries(prueba-cable PRIVATE wintrust crypt32)
+target_link_libraries(prueba-cable PRIVATE wintrust crypt32 bcrypt)

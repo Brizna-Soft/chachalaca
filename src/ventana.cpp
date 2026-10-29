@@ -39,6 +39,8 @@
 
 namespace
 {
+    std::atomic<bool> g_cerrando{ false };   // para el hilo que espera al instalador
+
     constexpr int IdAtajoDetener = 0x0FFF;   // la tecla Pausa detiene todos los sonidos
     constexpr int IdAtajoPrimero = 0x1000;   // un atajo por sonido: 0x1000 + número del sonido
     const wchar_t* PaginaCable = L"https://vb-audio.com/Cable/";
@@ -506,16 +508,17 @@ void VentanaPrincipal::InstalarMicrofonoVirtual()
     d.SetYesNoLabels(L"Instalar", L"Ahora no");
     if (d.ShowModal() != wxID_YES) return;
 
-    if (!cha::FirmaDeVBAudio(instalador))
+    // Se revisa y se deja abierto (nadie lo puede cambiar) hasta que Windows ya lanzó el instalador
+    std::wstring error;
+    HANDLE revisado = cha::RevisarInstaladorVBCable(instalador, error);
+    if (revisado == INVALID_HANDLE_VALUE)
     {
-        ayuda::Aviso(L"El instalador de VB-CABLE que viene con Chachalaca no tiene la firma de VB-Audio. Por seguridad no lo abro.\n\n"
-                     L"Bájalo de su página oficial: " + wxString(PaginaCable),
+        ayuda::Aviso(wxString(error) + L"\n\nBájalo de su página oficial: " + PaginaCable,
                      L"Instalar el micrófono virtual", wxOK | wxICON_WARNING, this);
         return;
     }
-
-    std::wstring error;
     HANDLE proceso = cha::AbrirInstaladorVBCable(GetHWND(), instalador, error);
+    CloseHandle(revisado);
     if (!proceso)
     {
         ayuda::Aviso(error, L"Instalar el micrófono virtual", wxOK | wxICON_WARNING, this);
@@ -528,6 +531,7 @@ void VentanaPrincipal::InstalarMicrofonoVirtual()
     std::thread([ventana, proceso]() {
         WaitForSingleObject(proceso, INFINITE);
         CloseHandle(proceso);
+        if (g_cerrando || !wxTheApp) return;
         wxTheApp->CallAfter([ventana]() {
             VentanaPrincipal* v = ventana.get();
             if (!v) return;
@@ -555,6 +559,11 @@ void VentanaPrincipal::AgregarArchivos(const wxArrayString& archivos)
     wxString errores;
     for (const auto& a : archivos)
     {
+        if (m_sonidos.size() >= cha::MaxSonidos)
+        {
+            errores += wxString::Format(L"Ya hay %d sonidos, que es el máximo.\n", (int)cha::MaxSonidos);
+            break;
+        }
         SonidoEnTablero s;
         s.datos.ruta = a.ToStdWstring();
         s.datos.nombre = wxFileName(a).GetName().ToStdWstring();
@@ -675,6 +684,7 @@ void VentanaPrincipal::MenuSonido(size_t i)
     else if (elegido == idQuitar)
     {
         QuitarAtajos();   // los números de los atajos cambian
+        if (m_sonidos[i].audio) m_retirados.push_back(m_sonidos[i].audio);
         m_sonidos.erase(m_sonidos.begin() + (ptrdiff_t)i);
         Guardar();
         Rehacer();
@@ -768,6 +778,7 @@ void VentanaPrincipal::Guardar()
 
 void VentanaPrincipal::AlCerrar(wxCloseEvent&)
 {
+    g_cerrando = true;
     m_reloj.Stop();
     Guardar();
     QuitarAtajos();

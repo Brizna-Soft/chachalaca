@@ -32,13 +32,16 @@ void cha::Ajustes::Cargar()
         {
             for (const auto& s : j["sonidos"])
             {
+                if (sonidos.size() >= MaxSonidos) break;
+                if (!s.is_object()) continue;
                 SonidoGuardado g;
                 g.ruta = Ancho(s.value("ruta", ""));
                 g.nombre = Ancho(s.value("nombre", ""));
                 g.atajoMods = s.value("atajoMods", 0);
                 g.atajoTecla = s.value("atajoTecla", 0);
                 g.volumen = std::clamp(s.value("volumen", 100), 0, 200);
-                if (!g.ruta.empty()) sonidos.push_back(g);
+                if (g.nombre.size() > 80) g.nombre.resize(80);
+                if (!g.ruta.empty() && g.ruta.size() < 2048) sonidos.push_back(g);
             }
         }
         x = j.value("x", -1);

@@ -12,8 +12,11 @@ namespace cha
     // Ruta del instalador que viene con Chachalaca, o vacío si no está
     std::wstring InstaladorVBCable();
 
-    // true si el archivo tiene una firma digital válida de VB-Audio (Vincent Burel)
-    bool FirmaDeVBAudio(const std::wstring& ruta);
+    // Abre el instalador sin dejar que nadie lo cambie mientras tanto y revisa que sea exactamente el de VB-Audio:
+    // la huella SHA-256 fijada para el paquete que trae Chachalaca y una firma digital válida de VB-Audio.
+    // Devuelve el archivo abierto (hay que cerrarlo con CloseHandle después de abrir el instalador), o
+    // INVALID_HANDLE_VALUE con un texto para la persona.
+    HANDLE RevisarInstaladorVBCable(const std::wstring& ruta, std::wstring& error);
 
     // Abre el instalador con permiso de administrador y en modo silencioso. Devuelve el proceso para esperarlo
     // (hay que cerrarlo con CloseHandle), o nullptr con un texto para la persona.

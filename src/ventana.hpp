@@ -39,6 +39,8 @@ private:
     cha::MotorAudio& m_motor;
     cha::Ajustes& m_ajustes;
     std::vector<SonidoEnTablero> m_sonidos;
+    // Los quitados se guardan hasta cerrar: si todavía sonaban, el hilo de audio no tiene que liberar memoria
+    std::vector<std::shared_ptr<const cha::Sonido>> m_retirados;
     wxTimer m_reloj;
     int m_atajosRegistrados = 0;
     bool m_atajoDetenerOk = false;

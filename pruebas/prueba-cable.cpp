@@ -58,8 +58,11 @@ int wmain(int argc, wchar_t** argv)
     // prueba-cable.exe --firma <ruta>: revisa la firma como lo hace Chachalaca antes de abrir el instalador
     if (argc > 2 && std::wstring(argv[1]) == L"--firma")
     {
-        bool ok = cha::FirmaDeVBAudio(argv[2]);
-        wprintf(L"Firma de VB-Audio: %s\n", ok ? L"sí" : L"no");
+        std::wstring error;
+        HANDLE h = cha::RevisarInstaladorVBCable(argv[2], error);
+        const bool ok = h != INVALID_HANDLE_VALUE;
+        if (ok) CloseHandle(h);
+        wprintf(L"Instalador original de VB-Audio: %s\n", ok ? L"si" : L"no");
         return ok ? 0 : 1;
     }
 
