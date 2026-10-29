@@ -128,11 +128,13 @@ namespace
             }
             if (std::sqrt(energia / Largo) < 0.01f) return 0;
 
-            // Diferencia y diferencia normalizada acumulada
-            for (size_t tau = 1; tau <= Ventana; tau++)
+            // Diferencia (solo hasta el tono más grave que interesa) y diferencia normalizada acumulada
+            const float fsBaja = m_fs / 2;
+            const size_t tauMin = (size_t)(fsBaja / 800.0f), tauMax = std::min<size_t>(Ventana - 1, (size_t)(fsBaja / 70.0f));
+            for (size_t tau = 1; tau <= tauMax + 1; tau++)
             {
                 float d = 0;
-                for (size_t j = 0; j < Ventana; j++)
+                for (size_t j = 0; j < Integracion; j++)
                 {
                     float e = m_baja[j] - m_baja[j + tau];
                     d += e * e;
@@ -140,9 +142,7 @@ namespace
                 m_dif[tau] = d;
             }
             float acumulado = 0;
-            const float fsBaja = m_fs / 2;
-            const size_t tauMin = (size_t)(fsBaja / 800.0f), tauMax = std::min<size_t>(Ventana - 1, (size_t)(fsBaja / 70.0f));
-            for (size_t tau = 1; tau <= tauMax; tau++)
+            for (size_t tau = 1; tau <= tauMax + 1; tau++)
             {
                 acumulado += m_dif[tau];
                 m_normal[tau] = acumulado > 0 ? m_dif[tau] * (float)tau / acumulado : 1.0f;
@@ -162,7 +162,8 @@ namespace
         }
 
     private:
-        static constexpr size_t Ventana = 600;   // 25 ms a 24 kHz
+        static constexpr size_t Ventana = 600;       // 25 ms a 24 kHz
+        static constexpr size_t Integracion = 480;   // 20 ms: lo que se compara en cada prueba
         static constexpr size_t Largo = Ventana * 2;
         float m_fs;
         std::vector<float> m_historia, m_baja, m_dif;
@@ -283,7 +284,8 @@ struct cha::ProcesadorVoz::Impl
     std::array<Peine, 8> peines;             // cueva
     std::array<PasaTodo, 4> pasaTodos;
     DetectorTono detector;
-    float correccion = 0;                    // autotune, en semitonos
+    float correccion = 0, correccionSuave = 0;   // autotune, en semitonos
+    int sinMedir = 0;                            // muestras desde la última medición del tono
 
     explicit Impl(int frecuencia) : fs((float)frecuencia), detector((float)frecuencia)
     {
@@ -306,7 +308,8 @@ struct cha::ProcesadorVoz::Impl
     void Reiniciar(Efecto e)
     {
         if (CambiaTono(e)) tono.reset();
-        correccion = 0;
+        correccion = correccionSuave = 0;
+        sinMedir = 0;
         switch (e)
         {
         case Efecto::Robot:
@@ -359,12 +362,19 @@ void cha::ProcesadorVoz::Procesar(Efecto e, const float* entrada, float* salida,
         float semitonos = Semitonos(e);
         if (e == Efecto::Autotune || e == Efecto::RobotAutotune)
         {
-            // Autotune duro: lleva cada nota a la más cercana, al instante
+            // Autotune duro: lleva cada nota a la más cercana. El tono se mide cada 10 ms (no en cada bloque, que
+            // puede ser más corto) y el cambio se suaviza un poco para que no truene entre bloques.
             s.detector.Agregar(entrada, n);
-            float hz = s.detector.Medir();
-            if (hz > 0) s.correccion = Correccion(hz, e == Efecto::RobotAutotune);
-            else s.correccion *= 0.9f;
-            semitonos = s.correccion;
+            s.sinMedir += n;
+            if (s.sinMedir >= (int)(s.fs / 100))
+            {
+                s.sinMedir = 0;
+                float hz = s.detector.Medir();
+                if (hz > 0) s.correccion = Correccion(hz, e == Efecto::RobotAutotune);
+                else s.correccion *= 0.9f;
+            }
+            s.correccionSuave += (s.correccion - s.correccionSuave) * 0.6f;
+            semitonos = s.correccionSuave;
         }
         else if (e == Efecto::Caricatura)
         {

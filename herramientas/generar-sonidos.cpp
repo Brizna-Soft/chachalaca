@@ -274,21 +274,21 @@ namespace
             if (i >= s.size() - borde) g = (float)(s.size() - 1 - i) / borde;
             s[i] *= escala * g;
         }
+        if (s.empty() || s.size() > 0x3FFFFFF0u) return false;   // el WAV usa tamaños de 32 bits
+        std::vector<int16_t> muestras(s.size());
+        for (size_t i = 0; i < s.size(); i++) muestras[i] = (int16_t)std::lround(std::clamp(s[i], -1.0f, 1.0f) * 32767.0f);
+
         FILE* f = nullptr;
         if (_wfopen_s(&f, ruta.c_str(), L"wb") != 0 || !f) return false;
-        const uint32_t datos = (uint32_t)(s.size() * 2), total = 36 + datos, velocidad = Fs * 2, fs = Fs;
+        const uint32_t datos = (uint32_t)(muestras.size() * 2), total = 36 + datos, velocidad = Fs * 2, fs = Fs;
         const uint16_t pcm = 1, canales = 1, bloque = 2, bits = 16;
         const uint32_t veinte = 16;
-        fwrite("RIFF", 1, 4, f); fwrite(&total, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f);
-        fwrite(&veinte, 4, 1, f); fwrite(&pcm, 2, 1, f); fwrite(&canales, 2, 1, f); fwrite(&fs, 4, 1, f);
-        fwrite(&velocidad, 4, 1, f); fwrite(&bloque, 2, 1, f); fwrite(&bits, 2, 1, f);
-        fwrite("data", 1, 4, f); fwrite(&datos, 4, 1, f);
-        for (float v : s)
-        {
-            int16_t m = (int16_t)std::lround(std::clamp(v, -1.0f, 1.0f) * 32767.0f);
-            fwrite(&m, 2, 1, f);
-        }
-        return fclose(f) == 0;
+        bool ok = fwrite("RIFF", 1, 4, f) == 4 && fwrite(&total, 4, 1, f) == 1 && fwrite("WAVEfmt ", 1, 8, f) == 8
+            && fwrite(&veinte, 4, 1, f) == 1 && fwrite(&pcm, 2, 1, f) == 1 && fwrite(&canales, 2, 1, f) == 1
+            && fwrite(&fs, 4, 1, f) == 1 && fwrite(&velocidad, 4, 1, f) == 1 && fwrite(&bloque, 2, 1, f) == 1
+            && fwrite(&bits, 2, 1, f) == 1 && fwrite("data", 1, 4, f) == 4 && fwrite(&datos, 4, 1, f) == 1
+            && fwrite(muestras.data(), 2, muestras.size(), f) == muestras.size();
+        return fclose(f) == 0 && ok;
     }
 }
 

@@ -224,11 +224,8 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
         m_sonidos.push_back(std::move(s));
     }
     // La primera vez se agregan los sonidos que trae Chachalaca (después la persona decide)
-    if (!m_ajustes.sonidosDeFabrica)
-    {
-        m_ajustes.sonidosDeFabrica = true;
-        AgregarSonidosDeFabrica();
-    }
+    if (!m_ajustes.sonidosDeFabrica && AgregarSonidosDeFabrica() > 0)
+        m_ajustes.sonidosDeFabrica = true;   // si la carpeta no estaba, se vuelve a intentar la próxima vez
     RehacerTablero();
 
     // Tamaño y posición de la última vez (si sigue dentro de una pantalla)
@@ -622,14 +619,15 @@ void VentanaPrincipal::AgregarArchivos(const wxArrayString& archivos)
     if (!errores.empty()) ayuda::Aviso(L"Estos no se pudieron agregar:\n\n" + errores, L"Agregar sonidos", wxOK | wxICON_WARNING, this);
 }
 
-void VentanaPrincipal::AgregarSonidosDeFabrica()
+int VentanaPrincipal::AgregarSonidosDeFabrica()
 {
     wxString carpeta = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() + L"\\sonidos\\";
-    int agregados = 0;
+    int agregados = 0, encontrados = 0;
     for (const auto& f : SonidosDeFabrica)
     {
         std::wstring ruta = (carpeta + f.archivo).ToStdWstring();
         if (!cha::ExisteArchivo(ruta) || m_sonidos.size() >= cha::MaxSonidos) continue;
+        encontrados++;
         bool yaEsta = std::any_of(m_sonidos.begin(), m_sonidos.end(), [&](const SonidoEnTablero& s) {
             return _wcsicmp(s.datos.ruta.c_str(), ruta.c_str()) == 0;
         });
@@ -648,6 +646,7 @@ void VentanaPrincipal::AgregarSonidosDeFabrica()
         RehacerTablero();
         RegistrarAtajos();
     }
+    return encontrados;
 }
 
 void VentanaPrincipal::RehacerTablero()

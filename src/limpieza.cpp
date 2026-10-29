@@ -53,6 +53,7 @@ struct cha::LimpiadorVoz::Impl
         : cuadro(frecuencia / 100)
     {
         speex = speex_preprocess_state_init(cuadro, frecuencia);
+        if (!speex) return;   // sin Speex no se limpia nada (Procesar deja pasar la voz tal cual)
         int si = 1, no = 0, supresion = -30;
         speex_preprocess_ctl(speex, SPEEX_PREPROCESS_SET_DENOISE, &si);
         speex_preprocess_ctl(speex, SPEEX_PREPROCESS_SET_NOISE_SUPPRESS, &supresion);
@@ -91,7 +92,7 @@ void cha::LimpiadorVoz::Procesar(const float* in, float* out, int n, bool quitar
 {
     auto& s = *m;
     n = std::clamp(n, 0, BloqueMaximo);
-    if (!quitarRuido && !soloVoz)
+    if ((!quitarRuido && !soloVoz) || !s.speex || s.uno.empty())
     {
         s.activo = false;
         std::copy(in, in + n, out);

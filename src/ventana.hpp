@@ -27,8 +27,9 @@ class VentanaPrincipal : public wxFrame
 public:
     VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes);
     void AgregarArchivos(const wxArrayString& archivos);
-    // Los sonidos que trae Chachalaca (carpeta «sonidos» junto al programa); se saltan los que ya están
-    void AgregarSonidosDeFabrica();
+    // Los sonidos que trae Chachalaca (carpeta «sonidos» junto al programa); se saltan los que ya están.
+    // Devuelve cuántos encontró (agregados o que ya estaban).
+    int AgregarSonidosDeFabrica();
 
 private:
     struct SonidoEnTablero
