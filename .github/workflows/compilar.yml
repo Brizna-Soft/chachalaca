@@ -21,6 +21,8 @@ jobs:
     runs-on: windows-2022
     permissions:
       contents: write   # solo se usa para crear la versión cuando hay etiqueta
+      id-token: write   # para la atestación de origen del .zip (solo con etiqueta)
+      attestations: write
     env:
       VCPKG_ROOT: ${{ github.workspace }}\vendor\vcpkg
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vendor\vcpkg-binarios
@@ -60,6 +62,14 @@ jobs:
         with:
           name: chachalaca
           path: publicar/*.zip*
+
+      # Prueba pública de que el .zip lo armó GitHub con este código. Se comprueba con:
+      #   gh attestation verify <archivo.zip> --repo Brizna-Soft/chachalaca
+      - name: Atestación de origen del .zip
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: publicar/Chachalaca-*.zip
 
       - name: Publicar la versión
         if: startsWith(github.ref, 'refs/tags/v')
