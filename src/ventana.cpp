@@ -201,6 +201,7 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
     ayuda::Opciones datosAyuda;
     datosAyuda.descripcion = Descripcion;
     datosAyuda.carpetaDeRegistros = cha::CarpetaDatos();
+    datosAyuda.conF1 = false;   // F1 puede ser el atajo global de un sonido: la ayuda no se lo quita
     ayuda::AgregarMenu(barra, this, datosAyuda);
     SetMenuBar(barra);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
