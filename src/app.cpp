@@ -62,6 +62,7 @@ bool Aplicacion::OnInit()
 
 int Aplicacion::OnExit()
 {
+    ayuda::Cerrar();   // «Buscar actualización» ya no manda nada a la ventana
     m_motor.reset();
     return wxApp::OnExit();
 }

@@ -198,7 +198,10 @@ VentanaPrincipal::VentanaPrincipal(cha::MotorAudio& motor, cha::Ajustes& ajustes
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { AgregarSonidosDeFabrica(); }, idDeFabrica);
     archivo->Append(wxID_EXIT, L"&Salir");
     barra->Append(archivo, L"&Archivo");
-    barra->Append(ayuda::CrearMenu(this, Descripcion), L"A&yuda");
+    ayuda::Opciones datosAyuda;
+    datosAyuda.descripcion = Descripcion;
+    datosAyuda.carpetaDeRegistros = cha::CarpetaDatos();
+    ayuda::AgregarMenu(barra, this, datosAyuda);
     SetMenuBar(barra);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         wxFileDialog d(this, L"Elige tus sonidos", L"", L"",
